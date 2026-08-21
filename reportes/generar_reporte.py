@@ -17,6 +17,7 @@ import argparse
 import json
 import os
 import re
+import time
 import urllib.request
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -55,11 +56,24 @@ def load_credentials():
     return ck, cs
 
 
-def get(ck, cs, path, params):
+def get(ck, cs, path, params, retries=4):
     qs = '&'.join(f'{k}={v}' for k, v in params.items())
     url = f'{BASE}/{path}?{qs}&consumer_key={ck}&consumer_secret={cs}'
-    with urllib.request.urlopen(urllib.request.Request(url)) as r:
-        return json.loads(r.read().decode('utf-8')), dict(r.headers)
+    for attempt in range(retries):
+        try:
+            with urllib.request.urlopen(urllib.request.Request(url)) as r:
+                # r.headers (email.message.Message) does case-insensitive
+                # lookups; converting to a plain dict loses that and silently
+                # breaks X-WP-TotalPages lookups when a proxy/CDN lowercases
+                # header names (observed from some cloud egress paths, not
+                # from a home network) - keep the Message object instead of
+                # dict(r.headers).
+                return json.loads(r.read().decode('utf-8')), r.headers
+        except urllib.error.HTTPError as e:
+            if e.code in (429, 502, 503, 504) and attempt < retries - 1:
+                time.sleep(2 ** attempt)
+                continue
+            raise
 
 
 def fetch_all(ck, cs, path, params):
@@ -71,9 +85,11 @@ def fetch_all(ck, cs, path, params):
         if not d:
             break
         results.extend(d)
-        if page >= int(headers.get('X-WP-TotalPages', '1')):
+        total_pages = int(headers.get('X-WP-TotalPages', '1'))
+        if page >= total_pages:
             break
         page += 1
+        time.sleep(0.3)  # avoid tripping the host's rate limiting on long paginated pulls
     return results
 
 
