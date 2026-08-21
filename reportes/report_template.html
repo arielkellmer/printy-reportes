@@ -579,6 +579,41 @@
   function getFilteredDailySeries(){
     return DATA.daily_series.filter(function(d){ return inRange(d.fecha); });
   }
+
+  // ---------- Chart granularity ----------
+  // Charts (stacked bar, category bar, stat-card sparklines) plot one point
+  // per row. Beyond ~3 months that's too many skinny bars/dots to read (a
+  // full-year view would cram ~365 of them into the same width) — past the
+  // threshold, roll days up into months instead. Totals/deltas in the stat
+  // cards are computed from the exact daily data separately, never from
+  // this — aggregation here only affects what's drawn.
+  var MONTH_GRANULARITY_THRESHOLD = 92;
+  function monthBucketLabel(key){
+    var p = key.split('-');
+    return MONTHS[parseInt(p[1], 10) - 1] + ' ' + p[0].slice(2);
+  }
+  function getChartSeries(){
+    var filtered = getFilteredDailySeries();
+    if (filtered.length <= MONTH_GRANULARITY_THRESHOLD) {
+      return { granularity: 'day', rows: filtered };
+    }
+    var byMonth = {}, order = [];
+    filtered.forEach(function(d){
+      var mk = d.fecha.slice(0, 7);
+      if (!byMonth[mk]) {
+        byMonth[mk] = { fecha: mk + '-01', _label: monthBucketLabel(mk) };
+        CATS.forEach(function(c){ byMonth[mk][c.key] = { qty: 0, valor: 0 }; });
+        order.push(mk);
+      }
+      var row = byMonth[mk];
+      CATS.forEach(function(c){
+        row[c.key].qty += d[c.key].qty;
+        row[c.key].valor += d[c.key].valor;
+      });
+    });
+    return { granularity: 'month', rows: order.map(function(mk){ return byMonth[mk]; }) };
+  }
+
   var PRESET_KEYS = ['d7', 'd30', 'd90', 'y-cur', 'y-prev', 'all'];
   function presetRange(key){
     if (key === 'all') return [DATA.desde, DATA.hasta];
@@ -645,6 +680,7 @@
     var filtered = getFilteredDailySeries();
     var n = filtered.length;
     var mid = Math.floor(n/2);
+    var chartRows = getChartSeries().rows;
 
     // ---- Ventas totales (todas las categorías combinadas) ----
     (function(){
@@ -679,7 +715,7 @@
       host.appendChild(card);
 
       var spark = card.querySelector('.spark');
-      var series = filtered.map(dayTotal);
+      var series = chartRows.map(dayTotal);
       renderSparkline(spark, series, cssVar('--ink'));
 
       card.addEventListener('click', function(){ selectTab('Resumen'); });
@@ -714,7 +750,7 @@
       host.appendChild(card);
 
       var spark = card.querySelector('.spark');
-      var series = filtered.map(function(d){ return d[cat.key].valor; });
+      var series = chartRows.map(function(d){ return d[cat.key].valor; });
       renderSparkline(spark, series, cssVar(cat.varName));
 
       card.addEventListener('click', function(){ selectTab(cat.key); });
@@ -725,7 +761,7 @@
   function renderStackedChart(){
     var host = document.getElementById('resumen-chart-svg');
     while (host.firstChild) host.removeChild(host.firstChild);
-    var days = getFilteredDailySeries();
+    var days = getChartSeries().rows;
     var n = days.length;
     var unit = 22, barW = 14, padL = 4, padR = 4, padTop = 10, padBot = 22;
     var H = 220;
@@ -771,7 +807,7 @@
         var rows = CATS.filter(function(cc){ return dd[cc.key].valor > 0; }).map(function(cc){
           return '<div class="tt-row"><span class="tt-sw" style="background:'+c.cat[cc.key]+'"><\/span>'+esc(cc.label)+': '+fmtMoney(dd[cc.key].valor)+'<\/div>';
         }).join('');
-        showTooltip(evt, '<div class="tt-title">'+fmtDateFull(dd.fecha)+' — '+fmtMoney(total)+'<\/div>'+rows);
+        showTooltip(evt, '<div class="tt-title">'+(dd._label || fmtDateFull(dd.fecha))+' — '+fmtMoney(total)+'<\/div>'+rows);
       });
       hit.addEventListener('mouseleave', hideTooltip);
       host.appendChild(hit);
@@ -781,7 +817,7 @@
     Array.from(new Set([0, Math.floor((n-1)/2), n-1])).forEach(function(i){
       var x = padL + i*unit + unit/2;
       var t = svgEl('text', { x:x, y:H-6, 'text-anchor':'middle', 'font-size':9, fill:c.inkMuted, 'font-family':'"IBM Plex Mono", monospace' });
-      t.textContent = fmtDateShort(days[i].fecha);
+      t.textContent = days[i]._label || fmtDateShort(days[i].fecha);
       host.appendChild(t);
     });
   }
@@ -810,7 +846,7 @@
       }
       var hit = svgEl('rect', { x: padL + i*unit, y: padTop, width: unit, height: plotH, fill:'transparent' });
       hit.addEventListener('mousemove', function(evt){
-        showTooltip(evt, '<div class="tt-title">'+fmtDateFull(d.fecha)+'<\/div><div class="tt-row"><span class="tt-sw" style="background:'+color+'"><\/span>'+fmtMoney(d.valor)+' · '+fmtInt(d.qty)+' u.<\/div>');
+        showTooltip(evt, '<div class="tt-title">'+(d._label || fmtDateFull(d.fecha))+'<\/div><div class="tt-row"><span class="tt-sw" style="background:'+color+'"><\/span>'+fmtMoney(d.valor)+' · '+fmtInt(d.qty)+' u.<\/div>');
       });
       hit.addEventListener('mouseleave', hideTooltip);
       host.appendChild(hit);
@@ -819,7 +855,7 @@
       if (!series[i]) return;
       var x = padL + i*unit + unit/2;
       var t = svgEl('text', { x:x, y:H-6, 'text-anchor':'middle', 'font-size':9, fill:c.inkMuted, 'font-family':'"IBM Plex Mono", monospace' });
-      t.textContent = fmtDateShort(series[i].fecha);
+      t.textContent = series[i]._label || fmtDateShort(series[i].fecha);
       host.appendChild(t);
     });
   }
@@ -890,9 +926,11 @@
       miniStat('Ticket promedio', fmtMoney(agg.avg_ticket)) +
       miniStat('Días con ventas', agg.days_con_venta + ' / ' + filteredN);
 
-    ref.rangeLabel.textContent = ref.label + ' — ' + fmtDateShort(range.from) + ' a ' + fmtDateShort(range.to);
+    var chart = getChartSeries();
+    var monthly = chart.granularity === 'month';
+    ref.rangeLabel.textContent = ref.label + ' — ' + fmtDateShort(range.from) + ' a ' + fmtDateShort(range.to) + (monthly ? ' · agrupado por mes' : '');
 
-    var seriesForChart = getFilteredDailySeries().map(function(d){ return { fecha: d.fecha, valor: d[ref.key].valor, qty: d[ref.key].qty }; });
+    var seriesForChart = chart.rows.map(function(d){ return { fecha: d.fecha, valor: d[ref.key].valor, qty: d[ref.key].qty, _label: d._label }; });
     renderCategoryChart(ref.chartHost, seriesForChart, cssVar(ref.varName));
 
     // daily table
@@ -985,7 +1023,9 @@
   }
 
   function renderResumenPanelContent(){
-    document.getElementById('resumen-range-label').textContent = fmtDateShort(range.from) + ' a ' + fmtDateShort(range.to);
+    var monthly = getChartSeries().granularity === 'month';
+    document.getElementById('resumen-range-label').textContent =
+      fmtDateShort(range.from) + ' a ' + fmtDateShort(range.to) + (monthly ? ' · agrupado por mes' : '');
     renderStackedChart();
   }
 
