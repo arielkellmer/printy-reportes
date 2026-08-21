@@ -395,12 +395,18 @@ def build_report_json(df, desde, hasta):
 
     cat_keys = BUCKETS_MAIN + ['Otros']
     daily = {dt: {k: {'qty': 0, 'valor': 0.0} for k in cat_keys} for dt in all_dates}
+    orders_by_day = {dt: set() for dt in all_dates}
     for r in rows.itertuples(index=False):
         if r.fecha not in daily:
             continue
         daily[r.fecha][r.bucket]['qty'] += r.cantidad
         daily[r.fecha][r.bucket]['valor'] += r.valor
-    daily_series = [{'fecha': dt, **daily[dt]} for dt in all_dates]
+        orders_by_day[r.fecha].add(r.order_id)
+    # pedidos = distinct orders that day, across all categories (an order
+    # with lines in two categories counts once, not twice) - each order has
+    # a single date_created, so summing this across a date range never
+    # double-counts an order the way summing per-category totals would.
+    daily_series = [{'fecha': dt, 'pedidos': len(orders_by_day[dt]), **daily[dt]} for dt in all_dates]
 
     categories_out = []
     for key in cat_keys:

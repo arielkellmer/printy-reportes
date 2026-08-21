@@ -183,6 +183,8 @@
     transition: border-color .15s ease, transform .1s ease;
   }
   .stat-card:hover { transform: translateY(-1px); }
+  .stat-card-total { grid-column: 1 / -1; }
+  .stat-card-total .value { font-size: 30px; }
   .stat-card .label {
     font-size: 12px;
     font-weight: 600;
@@ -643,6 +645,45 @@
     var filtered = getFilteredDailySeries();
     var n = filtered.length;
     var mid = Math.floor(n/2);
+
+    // ---- Ventas totales (todas las categorías combinadas) ----
+    (function(){
+      function dayTotal(d){
+        return CATS.reduce(function(s,c){ return s + d[c.key].valor; }, 0);
+      }
+      var totalValor = filtered.reduce(function(s,d){ return s + dayTotal(d); }, 0);
+      var totalPedidos = filtered.reduce(function(s,d){ return s + (d.pedidos || 0); }, 0);
+
+      var card = document.createElement('div');
+      card.className = 'card stat-card stat-card-total';
+      card.style.setProperty('--cat-color', 'var(--ink)');
+
+      var delta = null;
+      if (n >= 2) {
+        var sumA = filtered.slice(0, mid).reduce(function(a,d){return a + dayTotal(d);}, 0);
+        var sumB = filtered.slice(mid).reduce(function(a,d){return a + dayTotal(d);}, 0);
+        if (sumA > 0) delta = (sumB - sumA) / sumA * 100;
+      }
+      var deltaHtml = '';
+      if (delta !== null && isFinite(delta)) {
+        var dir = delta >= 0 ? 'up' : 'down';
+        var arrow = delta >= 0 ? '↑' : '↓';
+        deltaHtml = '<span class="delta '+dir+'">'+arrow+' '+Math.abs(delta).toFixed(0)+'%<\/span>';
+      }
+
+      card.innerHTML =
+        '<div class="label"><span class="dot"><\/span>Ventas totales<\/div>'+
+        '<div class="value">'+fmtMoneyCompact(totalValor)+'<\/div>'+
+        '<div class="row2"><span class="qty">'+fmtInt(totalPedidos)+' pedidos<\/span>'+deltaHtml+'<\/div>'+
+        '<svg class="spark"><\/svg>';
+      host.appendChild(card);
+
+      var spark = card.querySelector('.spark');
+      var series = filtered.map(dayTotal);
+      renderSparkline(spark, series, cssVar('--ink'));
+
+      card.addEventListener('click', function(){ selectTab('Resumen'); });
+    })();
 
     CATS.forEach(function(cat){
       var catData = DATA.categories.filter(function(c){return c.key===cat.key;})[0];
