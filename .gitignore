@@ -1,0 +1,4 @@
+reportes/Reporte_Ventas_Printy.html
+reportes/*.xlsx
+__pycache__/
+*.pyc
