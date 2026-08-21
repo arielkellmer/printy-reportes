@@ -116,6 +116,51 @@ def bucket_for(prod_cat, prod_catnames, product_id):
     return 'Otros (sin categoria)'
 
 
+PAGO_ORDER = ['Transferencia', 'Tarjeta de crédito/débito', 'Efectivo', 'Otro / sin dato']
+ENVIO_ORDER = ['Retiro por el local', 'Mensajería', 'Correo a domicilio', 'Correo a sucursal',
+               'Correo (sin especificar)', 'Otro / sin dato']
+
+
+def normalize_payment(payment_method_title):
+    # WooCommerce order-level field; titles vary (discount suffixes, typos,
+    # HTML fragments like "<small>...</small>") so match by substring, not
+    # exact string. 'Efectivo' and unrecognized/empty titles are kept as
+    # their own buckets rather than folded into Transferencia/Tarjeta.
+    t = (payment_method_title or '').lower()
+    if 'transferencia' in t:
+        return 'Transferencia'
+    if 'tarjeta' in t:
+        return 'Tarjeta de crédito/débito'
+    if 'efectivo' in t:
+        return 'Efectivo'
+    return 'Otro / sin dato'
+
+
+def normalize_shipping(shipping_lines):
+    # Same substring-matching approach as normalize_payment, over the
+    # concatenated shipping_lines method_title(s) for the order. Historical
+    # data has ~700 orders titled just "Correo Argentino" (no domicilio/
+    # sucursal qualifier - an older label, before the site split it into two
+    # options) and ~140 "Envío gratuito" - neither can be safely inferred as
+    # one or the other, so both land in 'Correo (sin especificar)' rather
+    # than being guessed into a specific bucket.
+    titles = ' '.join((s.get('method_title') or '') for s in (shipping_lines or []))
+    t = titles.lower().strip()
+    if not t:
+        return 'Otro / sin dato'
+    if 'retiro' in t:
+        return 'Retiro por el local'
+    if 'mensajer' in t:
+        return 'Mensajería'
+    if 'domicilio' in t:
+        return 'Correo a domicilio'
+    if 'sucursal' in t:
+        return 'Correo a sucursal'
+    if 'correo' in t or 'gratuito' in t:
+        return 'Correo (sin especificar)'
+    return 'Otro / sin dato'
+
+
 def build_dataframe(products, orders):
     prod_cat = {p['id']: {c['id'] for c in p.get('categories', [])} for p in products}
     prod_catnames = {p['id']: [c['name'] for c in p.get('categories', [])] for p in products}
@@ -125,6 +170,8 @@ def build_dataframe(products, orders):
         if o['status'] not in VALID_STATUSES:
             continue
         date_str = o['date_created'][:10]
+        payment_bucket = normalize_payment(o.get('payment_method_title'))
+        shipping_bucket = normalize_shipping(o.get('shipping_lines'))
         for li in o['line_items']:
             pid = li['product_id']
             bucket = bucket_for(prod_cat, prod_catnames, pid)
@@ -174,6 +221,8 @@ def build_dataframe(products, orders):
                 'valor': float(li['total']),
                 'copias': copias,
                 'order_id': o['id'],
+                'payment_bucket': payment_bucket,
+                'shipping_bucket': shipping_bucket,
             })
     df = pd.DataFrame(rows)
     if len(df):
@@ -461,6 +510,9 @@ def build_report_json(df, desde, hasta):
         for r in detalle.itertuples(index=False)
     ]
 
+    pagos_out = build_breakdown(rows, all_dates, 'payment_bucket', PAGO_ORDER)
+    envios_out = build_breakdown(rows, all_dates, 'shipping_bucket', ENVIO_ORDER)
+
     return {
         'desde': desde,
         'hasta': hasta,
@@ -468,7 +520,40 @@ def build_report_json(df, desde, hasta):
         'categories': categories_out,
         'daily_series': daily_series,
         'detalle': detalle_out,
+        'pagos': pagos_out,
+        'envios': envios_out,
     }
+
+
+def build_breakdown(rows, all_dates, group_col, preferred_order):
+    """Order-level breakdown (payment method / shipping method) - dense
+    per-day series per bucket, same shape family as daily_series/categories
+    so the front-end can reuse the same range-filtering approach. Unlike
+    categories (grouped by line item), 'pedidos' here is the primary count
+    people care about (an order has exactly one payment method and one
+    shipping method), so it's tracked per bucket per day, not just per
+    overall day."""
+    present = [k for k in preferred_order if k in set(rows[group_col])]
+    present += sorted(set(rows[group_col]) - set(present))  # safety net for any unexpected bucket
+
+    daily = {dt: {k: {'qty': 0, 'valor': 0.0, 'pedidos': set()} for k in present} for dt in all_dates}
+    for r in rows.itertuples(index=False):
+        if r.fecha not in daily:
+            continue
+        k = getattr(r, group_col)
+        daily[r.fecha][k]['qty'] += r.cantidad
+        daily[r.fecha][k]['valor'] += r.valor
+        daily[r.fecha][k]['pedidos'].add(r.order_id)
+
+    daily_series = []
+    for dt in all_dates:
+        row = {'fecha': dt}
+        for k in present:
+            d = daily[dt][k]
+            row[k] = {'qty': d['qty'], 'valor': d['valor'], 'pedidos': len(d['pedidos'])}
+        daily_series.append(row)
+
+    return {'buckets': present, 'daily_series': daily_series}
 
 
 def build_html(df, desde, hasta, template_path=None):

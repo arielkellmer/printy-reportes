@@ -989,6 +989,78 @@
     renderStackedChart();
   }
 
+  // ---------- Pagos y Envíos panel ----------
+  var BREAKDOWN_PALETTE = ['--cat-cuadros','--cat-fotolibros','--cat-copias','--cat-otros','--ink-secondary','--ink-muted'];
+
+  function buildPagosEnviosPanelShell(){
+    var panel = document.createElement('div');
+    panel.className = 'panel';
+    panel.id = 'panel-pagosenvios';
+    panel.setAttribute('role','tabpanel');
+    panel.innerHTML =
+      '<div class="card">' +
+        '<h2>Forma de pago<\/h2>' +
+        '<p class="card-sub" id="pagos-range-label"><\/p>' +
+        '<div class="rank-head has-copias"><span>Método<\/span><span>Pedidos<\/span><span>&nbsp;<\/span><span>Valor<\/span><span>%<\/span><\/div>' +
+        '<div class="rank-list" id="pagos-rank-list"><\/div>' +
+      '<\/div>' +
+      '<div class="card">' +
+        '<h2>Forma de envío<\/h2>' +
+        '<p class="card-sub">Retiro por el local, mensajería o correo. “Correo (sin especificar)” agrupa pedidos con etiqueta vieja “Correo Argentino” o “Envío gratuito” que no aclaran domicilio o sucursal.<\/p>' +
+        '<div class="rank-head has-copias"><span>Método<\/span><span>Pedidos<\/span><span>&nbsp;<\/span><span>Valor<\/span><span>%<\/span><\/div>' +
+        '<div class="rank-list" id="envios-rank-list"><\/div>' +
+      '<\/div>';
+    document.getElementById('panels').appendChild(panel);
+  }
+
+  function aggregateBreakdown(breakdown){
+    var buckets = breakdown.buckets;
+    var totals = {};
+    buckets.forEach(function(b){ totals[b] = { valor:0, qty:0, pedidos:0 }; });
+    breakdown.daily_series.forEach(function(d){
+      if (!inRange(d.fecha)) return;
+      buckets.forEach(function(b){
+        totals[b].valor += d[b].valor;
+        totals[b].qty += d[b].qty;
+        totals[b].pedidos += d[b].pedidos;
+      });
+    });
+    var grandTotal = buckets.reduce(function(s,b){ return s + totals[b].valor; }, 0);
+    var rows = buckets.map(function(b,i){
+      return {
+        label: b,
+        valor: totals[b].valor,
+        pedidos: totals[b].pedidos,
+        pct: grandTotal ? Math.round(totals[b].valor/grandTotal*1000)/10 : 0,
+        color: 'var(' + BREAKDOWN_PALETTE[i % BREAKDOWN_PALETTE.length] + ')'
+      };
+    }).sort(function(a,b){ return b.valor - a.valor; });
+    return rows;
+  }
+
+  function renderBreakdownList(host, rows){
+    host.innerHTML = '';
+    var maxVal = rows.length ? Math.max.apply(null, rows.map(function(r){return r.valor;})) : 1;
+    rows.forEach(function(r){
+      var row = document.createElement('div');
+      row.className = 'rank-row has-copias';
+      var pct = maxVal ? (r.valor / maxVal * 100) : 0;
+      row.innerHTML =
+        '<div class="rank-name" title="'+esc(r.label)+'">'+esc(r.label)+'<\/div>' +
+        '<div class="rank-copias">'+fmtInt(r.pedidos)+'<\/div>' +
+        '<div class="rank-track"><div class="rank-fill" style="width:'+pct.toFixed(1)+'%; background:'+r.color+'"><\/div><\/div>' +
+        '<div class="rank-value">'+fmtMoney(r.valor)+'<\/div>' +
+        '<div class="rank-pct">'+r.pct+'%<\/div>';
+      host.appendChild(row);
+    });
+  }
+
+  function renderPagosEnviosPanelContent(){
+    document.getElementById('pagos-range-label').textContent = fmtDateShort(range.from) + ' a ' + fmtDateShort(range.to);
+    renderBreakdownList(document.getElementById('pagos-rank-list'), aggregateBreakdown(DATA.pagos));
+    renderBreakdownList(document.getElementById('envios-rank-list'), aggregateBreakdown(DATA.envios));
+  }
+
   // ---------- Detalle panel ----------
   function buildDetallePanel(){
     var panel = document.createElement('div');
@@ -1072,6 +1144,7 @@
 
     var tabs = [{ key: 'Resumen', label: 'Resumen', varName: null }]
       .concat(CATS)
+      .concat([{ key: 'PagosEnvios', label: 'Pagos y Envíos', varName: null }])
       .concat([{ key: 'Detalle', label: 'Detalle', varName: null }]);
 
     tabs.forEach(function(t){
@@ -1160,6 +1233,9 @@
       var ref = buildCategoryPanelShell(cat);
       panelRenderers[cat.key] = function(){ renderCategoryPanelContent(ref); };
     });
+
+    buildPagosEnviosPanelShell();
+    panelRenderers['PagosEnvios'] = renderPagosEnviosPanelContent;
 
     panelRenderers['Detalle'] = buildDetallePanel();
 
