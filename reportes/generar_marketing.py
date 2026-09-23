@@ -191,28 +191,29 @@ def fetch_orders(desde, hasta):
 
 # ---------------------------------------------------------------- Meta (opcional)
 def fetch_meta(desde, hasta):
-    token, account = os.environ.get('META_ACCESS_TOKEN'), os.environ.get('META_AD_ACCOUNT')
-    if not token or not account:
+    token, accounts = os.environ.get('META_ACCESS_TOKEN'), os.environ.get('META_AD_ACCOUNT')
+    if not token or not accounts:
         return None
-    account = account if account.startswith('act_') else f'act_{account}'
-    params = {
-        'level': 'ad', 'time_increment': 1, 'limit': 500, 'access_token': token,
-        'fields': 'ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,spend,impressions,clicks',
-        'time_range': json.dumps({'since': desde, 'until': hasta}),
-    }
-    url = f'{META_API}/{account}/insights?' + urllib.parse.urlencode(params)
     names, spend = {}, []
-    while url:
-        with urllib.request.urlopen(url) as r:
-            j = json.loads(r.read().decode('utf-8'))
-        for x in j.get('data', []):
-            names[x['ad_id']] = x.get('ad_name', '')
-            names[x['adset_id']] = x.get('adset_name', '')
-            names[x['campaign_id']] = x.get('campaign_name', '')
-            spend.append([x['date_start'], x['campaign_id'], x['adset_id'], x['ad_id'],
-                          round(float(x.get('spend') or 0)), int(x.get('impressions') or 0), int(x.get('clicks') or 0)])
-        url = j.get('paging', {}).get('next')
-        time.sleep(0.2)
+    for account in (a.strip() for a in accounts.split(',') if a.strip()):  # admite varias cuentas separadas por coma
+        account = account if account.startswith('act_') else f'act_{account}'
+        params = {
+            'level': 'ad', 'time_increment': 1, 'limit': 500, 'access_token': token,
+            'fields': 'ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,spend,impressions,clicks',
+            'time_range': json.dumps({'since': desde, 'until': hasta}),
+        }
+        url = f'{META_API}/{account}/insights?' + urllib.parse.urlencode(params)
+        while url:
+            with urllib.request.urlopen(url) as r:
+                j = json.loads(r.read().decode('utf-8'))
+            for x in j.get('data', []):
+                names[x['ad_id']] = x.get('ad_name', '')
+                names[x['adset_id']] = x.get('adset_name', '')
+                names[x['campaign_id']] = x.get('campaign_name', '')
+                spend.append([x['date_start'], x['campaign_id'], x['adset_id'], x['ad_id'],
+                              round(float(x.get('spend') or 0)), int(x.get('impressions') or 0), int(x.get('clicks') or 0)])
+            url = j.get('paging', {}).get('next')
+            time.sleep(0.2)
     return {'names': names, 'spend': spend}
 
 
