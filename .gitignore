@@ -2,3 +2,4 @@ reportes/Reporte_Ventas_Printy.html
 reportes/*.xlsx
 __pycache__/
 *.pyc
+reportes/Marketing_Printy.html

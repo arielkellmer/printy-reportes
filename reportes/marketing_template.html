@@ -1,0 +1,453 @@
+<title>Printy Marketing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap">
+<style>
+:root{
+  --page:#f6f7f5; --surface:#fcfcfb; --surface-2:#eef0ec; --line:#e1e0d9; --axis:#c3c2b7;
+  --ink:#121412; --ink-2:#4f524d; --ink-3:#85877f; --accent:#1d3d5c; --accent-ink:#ffffff;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300; --s7:#4a3aa7;
+  --s-otros:#a9aaa3; --s-imaxel:#6f716b;
+  --good:#0ca30c; --good-ink:#006300; --warn:#fab219; --warn-ink:#8a5a00; --serious:#ec835a; --serious-ink:#a3401a; --crit:#d03b3b;
+  --chip-good:#e3f4e3; --chip-warn:#fdf1d6; --chip-serious:#fbe6dc; --chip-muted:#eceeea;
+  --display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --body:"Figtree", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --page:#0f100f; --surface:#1a1a19; --surface-2:#232422; --line:#2c2c2a; --axis:#383835;
+    --ink:#f4f4f1; --ink-2:#c3c2b7; --ink-3:#8f9189; --accent:#9cc3ea; --accent-ink:#0f100f;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9;
+    --s-otros:#5d5f59; --s-imaxel:#8a8c85;
+    --good-ink:#4cc44c; --warn-ink:#f2c14e; --serious-ink:#f09a76;
+    --chip-good:#16301a; --chip-warn:#352a10; --chip-serious:#3a2118; --chip-muted:#262725;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --page:#0f100f; --surface:#1a1a19; --surface-2:#232422; --line:#2c2c2a; --axis:#383835;
+  --ink:#f4f4f1; --ink-2:#c3c2b7; --ink-3:#8f9189; --accent:#9cc3ea; --accent-ink:#0f100f;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9;
+  --s-otros:#5d5f59; --s-imaxel:#8a8c85;
+  --good-ink:#4cc44c; --warn-ink:#f2c14e; --serious-ink:#f09a76;
+  --chip-good:#16301a; --chip-warn:#352a10; --chip-serious:#3a2118; --chip-muted:#262725;
+}
+*{box-sizing:border-box}
+body{background:var(--page); color:var(--ink); font-family:var(--body); font-size:14px; line-height:1.45; padding-inline:16px; padding-block:20px 48px}
+.wrap{max-width:1180px; margin:0 auto; display:flex; flex-direction:column; gap:18px}
+header.top{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:12px}
+h1{font-family:var(--display); font-weight:700; font-size:clamp(22px,3.2vw,30px); letter-spacing:-.01em; margin:0; text-wrap:balance}
+.sub{color:var(--ink-3); font-size:12.5px}
+.controls{display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.seg{display:inline-flex; background:var(--surface-2); border-radius:8px; padding:3px; gap:2px; flex-wrap:wrap}
+.seg button{border:0; background:transparent; color:var(--ink-2); font:inherit; font-size:13px; font-weight:600; padding:6px 11px; border-radius:6px; cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface); color:var(--ink); box-shadow:0 1px 2px rgba(0,0,0,.12)}
+button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+nav.tabs{display:flex; gap:4px; border-bottom:1px solid var(--line); overflow-x:auto}
+nav.tabs button{border:0; background:none; font:inherit; font-weight:600; font-size:14px; color:var(--ink-3); padding:10px 12px; border-bottom:2px solid transparent; cursor:pointer; white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--ink); border-bottom-color:var(--accent)}
+.note{background:var(--chip-warn); color:var(--ink); border-radius:10px; padding:12px 14px; font-size:13.5px; max-width:none}
+.note b{font-weight:700}
+.tiles{display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px}
+@media (max-width:760px){.tiles{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.tile{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:4px}
+.tile .lab{font-size:11.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-3); font-weight:600}
+.tile .val{font-family:var(--display); font-weight:700; font-size:clamp(22px,3vw,28px); font-variant-numeric:tabular-nums; letter-spacing:-.01em}
+.tile .d{font-size:12.5px; color:var(--ink-3); font-variant-numeric:tabular-nums}
+.d.up{color:var(--good-ink)} .d.down{color:var(--serious-ink)}
+section.card{background:var(--surface); border:1px solid var(--line); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0}
+h2{font-family:var(--display); font-weight:700; font-size:18px; margin:0; text-wrap:balance}
+.hint{color:var(--ink-3); font-size:12.5px; margin:0; max-width:80ch}
+.tbl-wrap{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-variant-numeric:tabular-nums}
+th{font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; color:var(--ink-3); font-weight:600; text-align:right; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap}
+td{padding:9px 10px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap}
+th:first-child, td:first-child{text-align:left}
+td.l, th.l{text-align:left}
+tr.sub td{background:var(--surface-2); font-size:13px}
+tr.sub td:first-child{padding-left:28px}
+tr.clickable{cursor:pointer}
+tr.clickable:hover td{background:var(--surface-2)}
+.dot{display:inline-block; width:10px; height:10px; border-radius:3px; margin-right:8px; vertical-align:-1px}
+.chname{font-weight:600}
+.bar{height:8px; border-radius:4px; background:var(--surface-2); min-width:80px; position:relative}
+.bar > i{position:absolute; left:0; top:0; bottom:0; border-radius:4px}
+.chip{display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600; padding:3px 8px; border-radius:999px; white-space:nowrap}
+.chip.good{background:var(--chip-good); color:var(--good-ink)}
+.chip.warn{background:var(--chip-warn); color:var(--warn-ink)}
+.chip.serious{background:var(--chip-serious); color:var(--serious-ink)}
+.chip.muted{background:var(--chip-muted); color:var(--ink-3)}
+.legend{display:flex; flex-wrap:wrap; gap:6px 14px; font-size:12.5px; color:var(--ink-2)}
+.legend span{display:inline-flex; align-items:center}
+.chart{position:relative; width:100%}
+.chart svg{display:block; width:100%; height:auto; overflow:visible}
+.chart text{fill:var(--ink-3); font-size:11px; font-family:var(--body)}
+.tip{position:absolute; pointer-events:none; background:var(--surface); border:1px solid var(--line); box-shadow:0 6px 18px rgba(0,0,0,.14); border-radius:8px; padding:8px 10px; font-size:12.5px; min-width:180px; z-index:5; font-variant-numeric:tabular-nums}
+.tip b{display:block; margin-bottom:4px}
+.tip .r{display:flex; justify-content:space-between; gap:14px}
+.filters{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+select, input[type=search]{font:inherit; font-size:13px; padding:7px 10px; border-radius:8px; border:1px solid var(--axis); background:var(--surface); color:var(--ink); max-width:100%}
+.muted{color:var(--ink-3)}
+.small{font-size:12px}
+.more{align-self:flex-start; border:1px solid var(--axis); background:var(--surface); color:var(--ink); font:inherit; font-weight:600; font-size:13px; padding:7px 12px; border-radius:8px; cursor:pointer}
+.plat{display:flex; flex-direction:column; gap:10px}
+.plat + .plat{border-top:1px solid var(--line); padding-top:14px}
+.plat h3{font-family:var(--display); font-size:16px; margin:0; display:flex; gap:10px; align-items:baseline; flex-wrap:wrap}
+.plat h3 .muted{font-family:var(--body); font-size:12.5px; font-weight:500}
+.id{font-size:11.5px; color:var(--ink-3)}
+@media (prefers-reduced-motion:no-preference){ .bar>i{transition:width .25s ease} }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Printy · ¿De dónde vienen las ventas?</h1>
+      <div class="sub" id="gen"></div>
+    </div>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="Período" id="range">
+        <button data-r="fix">Desde el arreglo</button>
+        <button data-r="7">7 días</button>
+        <button data-r="30">30 días</button>
+        <button data-r="90">90 días</button>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-t="resumen">Qué funciona</button>
+    <button role="tab" data-t="visitas">Visitas</button>
+    <button role="tab" data-t="publicidad">Publicidad</button>
+    <button role="tab" data-t="ventas">Cada venta</button>
+  </nav>
+
+  <div class="note" id="note"></div>
+
+  <div id="p-resumen" class="tabpanel" style="display:flex;flex-direction:column;gap:18px">
+    <div class="tiles" id="tiles"></div>
+    <section class="card">
+      <h2>Canales: visitas, ventas y conversión</h2>
+      <p class="hint">Visitas según Google Analytics; ventas y facturación según los pedidos reales de WooCommerce (pagados o en proceso). La conversión es pedidos ÷ visitas de ese canal.</p>
+      <div class="tbl-wrap"><table id="t-channels"></table></div>
+    </section>
+    <section class="card">
+      <h2>Facturación por día y canal</h2>
+      <div class="legend" id="lg-sales"></div>
+      <div class="chart" id="c-sales"></div>
+    </section>
+  </div>
+
+  <div id="p-visitas" class="tabpanel" hidden style="flex-direction:column;gap:18px">
+    <section class="card">
+      <h2>Visitas por día y canal</h2>
+      <div class="legend" id="lg-visits"></div>
+      <div class="chart" id="c-visits"></div>
+    </section>
+    <section class="card">
+      <h2>Calidad de las visitas por canal</h2>
+      <p class="hint">"Con interés" = visitas que duraron más de 10 segundos, vieron 2+ páginas o hicieron una acción. Agregar al carrito cuenta eventos, no personas.</p>
+      <div class="tbl-wrap"><table id="t-visits"></table></div>
+    </section>
+  </div>
+
+  <div id="p-publicidad" class="tabpanel" hidden style="flex-direction:column;gap:18px">
+    <section class="card" id="ads"></section>
+  </div>
+
+  <div id="p-ventas" class="tabpanel" hidden style="flex-direction:column;gap:18px">
+    <section class="card">
+      <h2>Cada venta y de dónde vino</h2>
+      <div class="filters">
+        <select id="f-ch" aria-label="Canal"></select>
+        <input type="search" id="f-q" placeholder="Buscar pedido, producto, anuncio…" aria-label="Buscar">
+        <span class="muted small" id="f-count"></span>
+      </div>
+      <div class="tbl-wrap"><table id="t-orders"></table></div>
+      <button class="more" id="more" hidden>Mostrar más</button>
+    </section>
+  </div>
+</div>
+
+<script>
+const DATA = __MARKETING_DATA_JSON__;
+const CH = DATA.channels;
+const CH_COLOR = {meta:'--s1', buscadores:'--s2', directo:'--s3', redes:'--s4', tiktok:'--s5', whatsapp:'--s6', email:'--s7', otros:'--s-otros', imaxel:'--s-imaxel'};
+const chLabel = k => (CH.find(c => c.key === k) || {label:k}).label;
+const col = k => `var(${CH_COLOR[k] || '--s-otros'})`;
+const fmtN = n => Math.round(n).toLocaleString('es-AR');
+const fmt$ = n => '$' + Math.round(n).toLocaleString('es-AR');
+const fmtK = n => n >= 1e6 ? '$' + (n/1e6).toLocaleString('es-AR',{maximumFractionDigits:1}) + 'M' : n >= 1e3 ? '$' + Math.round(n/1e3) + 'k' : '$' + Math.round(n);
+const pct = (a,b) => b ? (100*a/b) : 0;
+const fmtP = p => p.toLocaleString('es-AR',{maximumFractionDigits: p < 10 ? 1 : 0}) + '%';
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const addDays = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0,10); };
+const daysBetween = (a,b) => Math.round((new Date(b+'T12:00:00') - new Date(a+'T12:00:00'))/864e5);
+const fmtDay = iso => { const [y,m,d] = iso.split('-'); return `${+d}/${+m}`; };
+const MON = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const nameOf = id => { if (!id) return ''; if (DATA.names[id]) return DATA.names[id]; return /^\d{10,}$/.test(id) ? '…' + id.slice(-6) : id; };
+
+let state = {range:'30', tab:'resumen', ch:'', q:'', limit:150, open:new Set()};
+try { const s = JSON.parse(localStorage.getItem('printy-mkt') || '{}'); if (s.range) state.range = s.range; if (s.tab) state.tab = s.tab; } catch(e){}
+if (location.hash && ['resumen','visitas','publicidad','ventas'].includes(location.hash.slice(1))) state.tab = location.hash.slice(1);
+const save = () => { try { localStorage.setItem('printy-mkt', JSON.stringify({range:state.range, tab:state.tab})); } catch(e){} };
+
+function period(r){
+  const to = DATA.hasta;
+  let from = r === 'fix' ? DATA.fix_date : addDays(to, -(+r - 1));
+  if (from < DATA.desde) from = DATA.desde;
+  return {from, to};
+}
+function prevPeriod(p){
+  const len = daysBetween(p.from, p.to) + 1;
+  const to = addDays(p.from, -1), from = addDays(p.from, -len);
+  return from < DATA.desde ? null : {from, to};
+}
+const inR = (d,p) => d >= p.from && d <= p.to;
+
+function aggregate(p){
+  const ch = {}; CH.forEach(c => ch[c.key] = {ses:0, eng:0, carts:0, gaBuy:0, orders:0, rev:0});
+  for (const [d,k,ses,eng,carts,buy] of DATA.ga_daily) if (inR(d,p)) { const a = ch[k] || ch.otros; a.ses += ses; a.eng += eng; a.carts += carts; a.gaBuy += buy; }
+  for (const o of DATA.orders) if (inR(o.dt.slice(0,10), p)) { const a = ch[o.ch] || ch.otros; a.orders++; a.rev += o.total; }
+  const tot = Object.values(ch).reduce((t,a) => { for (const k in a) t[k] = (t[k]||0) + a[k]; return t; }, {});
+  return {ch, tot};
+}
+
+function verdict(k, a, tot){
+  if (k === 'imaxel') return ['muted','Origen perdido'];
+  const conv = pct(a.orders, a.ses), avg = pct(tot.orders, tot.ses);
+  if (a.ses < 40 && a.orders < 3) return ['muted','Poco volumen'];
+  if (a.orders === 0) return ['serious','Visitas sin ventas'];
+  if (conv >= avg * 0.8) return ['good','Funciona'];
+  return ['warn','Vende poco'];
+}
+
+/* ---------- note ---------- */
+function renderNote(p){
+  const n = document.getElementById('note');
+  const fixed = p.from >= DATA.fix_date;
+  const ag = aggregate(p);
+  const lost = ag.ch.imaxel.rev, share = pct(lost, ag.tot.rev);
+  if (fixed) {
+    n.innerHTML = `<b>Período limpio.</b> Desde el ${fmtDay(DATA.fix_date)} el origen de cada venta se guarda bien (antes Imaxel lo pisaba). Con pocos días de datos, mirá tendencias, no conclusiones: esperá al menos 2–3 semanas.`;
+  } else {
+    n.innerHTML = `<b>Ojo con las ventas antes del ${fmtDay(DATA.fix_date)}:</b> en este período ${fmtP(share)} de la facturación (${fmt$(lost)}) figura como <b>“Imaxel (origen perdido)”</b>: clientes que armaron su producto en el editor y al volver perdieron el origen real. Esas ventas vinieron de algún canal (probablemente mucho de Meta Ads), pero no se puede saber cuál. Usá <b>“Desde el arreglo”</b> para ver datos limpios.`;
+  }
+}
+
+/* ---------- tiles ---------- */
+function tile(lab, val, cur, prev, fmt){
+  let d = '<span class="d">sin período anterior</span>';
+  if (prev != null) {
+    const ch = prev ? (cur - prev) / prev * 100 : null;
+    d = ch == null ? '<span class="d">—</span>' : `<span class="d ${ch >= 0 ? 'up' : 'down'}">${ch >= 0 ? '▲' : '▼'} ${fmtP(Math.abs(ch))} vs período anterior</span>`;
+  }
+  return `<div class="tile"><span class="lab">${lab}</span><span class="val">${val}</span>${d}</div>`;
+}
+function renderTiles(p){
+  const a = aggregate(p).tot, pp = prevPeriod(p), b = pp ? aggregate(pp).tot : null;
+  document.getElementById('tiles').innerHTML =
+    tile('Visitas', fmtN(a.ses), a.ses, b && b.ses) +
+    tile('Ventas (pedidos)', fmtN(a.orders), a.orders, b && b.orders) +
+    tile('Facturación', fmtK(a.rev), a.rev, b && b.rev) +
+    tile('Conversión', fmtP(pct(a.orders, a.ses)), pct(a.orders,a.ses), b && pct(b.orders,b.ses));
+}
+
+/* ---------- channels table ---------- */
+function renderChannels(p){
+  const {ch, tot} = aggregate(p);
+  const rows = CH.map(c => ({k:c.key, ...ch[c.key]})).filter(r => r.ses || r.orders).sort((a,b) => b.rev - a.rev || b.ses - a.ses);
+  const maxRev = Math.max(1, ...rows.map(r => r.rev));
+  document.getElementById('t-channels').innerHTML =
+    `<thead><tr><th>Canal</th><th>Visitas</th><th>Pedidos</th><th>Facturación</th><th class="l" style="min-width:110px">% de la facturación</th><th>Conversión</th><th>Ticket prom.</th><th class="l">Estado</th></tr></thead><tbody>` +
+    rows.map(r => { const [cls, txt] = verdict(r.k, r, tot); return `<tr>
+      <td><span class="dot" style="background:${col(r.k)}"></span><span class="chname">${esc(chLabel(r.k))}</span></td>
+      <td>${fmtN(r.ses)}</td><td>${fmtN(r.orders)}</td><td>${fmt$(r.rev)}</td>
+      <td class="l"><div style="display:flex;align-items:center;gap:8px"><div class="bar" style="flex:1"><i style="width:${(r.rev/maxRev*100).toFixed(1)}%;background:${col(r.k)}"></i></div><span class="small muted" style="width:38px;text-align:right">${fmtP(pct(r.rev, tot.rev))}</span></div></td>
+      <td>${r.ses ? fmtP(pct(r.orders, r.ses)) : '—'}</td><td>${r.orders ? fmt$(r.rev / r.orders) : '—'}</td>
+      <td class="l"><span class="chip ${cls}">${txt}</span></td></tr>`; }).join('') +
+    `</tbody><tfoot><tr><td class="chname">Total</td><td>${fmtN(tot.ses)}</td><td>${fmtN(tot.orders)}</td><td>${fmt$(tot.rev)}</td><td></td><td>${fmtP(pct(tot.orders, tot.ses))}</td><td>${tot.orders ? fmt$(tot.rev/tot.orders) : '—'}</td><td></td></tr></tfoot>`;
+}
+
+/* ---------- stacked chart ---------- */
+function dailySeries(p, kind){
+  const days = []; for (let d = p.from; d <= p.to; d = addDays(d,1)) days.push(d);
+  const idx = Object.fromEntries(days.map((d,i) => [d,i]));
+  const s = {}; CH.forEach(c => s[c.key] = new Array(days.length).fill(0));
+  if (kind === 'visits') { for (const [d,k,ses] of DATA.ga_daily) if (d in idx) (s[k] || s.otros)[idx[d]] += ses; }
+  else { for (const o of DATA.orders) { const d = o.dt.slice(0,10); if (d in idx) (s[o.ch] || s.otros)[idx[d]] += o.total; } }
+  const keys = CH.map(c => c.key).filter(k => s[k].some(v => v));
+  return {days, s, keys};
+}
+function renderLegend(id, keys){
+  document.getElementById(id).innerHTML = keys.map(k => `<span><span class="dot" style="background:${col(k)}"></span>${esc(chLabel(k))}</span>`).join('');
+}
+function niceMax(v){ if (v <= 0) return 1; const e = Math.pow(10, Math.floor(Math.log10(v))); const f = v / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e; }
+function stacked(elId, p, kind){
+  const el = document.getElementById(elId);
+  const {days, s, keys} = dailySeries(p, kind);
+  renderLegend(kind === 'visits' ? 'lg-visits' : 'lg-sales', keys);
+  const W = Math.max(320, el.clientWidth || 800), H = 260, m = {l:52, r:10, t:18, b:26};
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const totals = days.map((_,i) => keys.reduce((t,k) => t + s[k][i], 0));
+  const ymax = niceMax(Math.max(...totals) * 1.05);
+  const bw = iw / days.length, gap = days.length > 60 ? 1 : 2, barW = Math.max(1, bw - gap);
+  const y = v => m.t + ih - v / ymax * ih;
+  const fmtAxis = kind === 'visits' ? fmtN : fmtK;
+  let g = '';
+  for (let i = 0; i <= 4; i++) { const v = ymax * i / 4, yy = y(v); g += `<line x1="${m.l}" x2="${W-m.r}" y1="${yy}" y2="${yy}" stroke="var(--line)" stroke-width="1"/><text x="${m.l-8}" y="${yy+4}" text-anchor="end">${fmtAxis(v)}</text>`; }
+  const step = Math.ceil(days.length / Math.max(2, Math.floor(iw / 56)));
+  days.forEach((d,i) => { if (i % step === 0) g += `<text x="${m.l + i*bw + bw/2}" y="${H-8}" text-anchor="middle">${fmtDay(d)}</text>`; });
+  days.forEach((d,i) => {
+    let acc = 0; const x = m.l + i*bw + gap/2;
+    const segs = keys.filter(k => s[k][i] > 0);
+    segs.forEach((k,j) => {
+      const v = s[k][i], y0 = y(acc), y1 = y(acc + v); acc += v;
+      const h = Math.max(0, y0 - y1 - (j < segs.length - 1 ? 1.5 : 0));
+      const r = j === segs.length - 1 ? Math.min(3, barW/2, h) : 0;
+      if (r > 0) g += `<path d="M${x},${y1+h} V${y1+r} Q${x},${y1} ${x+r},${y1} H${x+barW-r} Q${x+barW},${y1} ${x+barW},${y1+r} V${y1+h} Z" fill="${col(k)}"/>`;
+      else g += `<rect x="${x}" y="${y1}" width="${barW}" height="${h}" fill="${col(k)}"/>`;
+    });
+  });
+  const fi = days.indexOf(DATA.fix_date);
+  if (fi >= 0) { const fx = m.l + fi*bw; g += `<line x1="${fx}" x2="${fx}" y1="${m.t-6}" y2="${m.t+ih}" stroke="var(--ink-2)" stroke-dasharray="3 3"/><text x="${fx+4}" y="${m.t-6}" style="fill:var(--ink-2);font-weight:600">Arreglo tracking</text>`; }
+  g += `<line x1="${m.l}" x2="${W-m.r}" y1="${m.t+ih}" y2="${m.t+ih}" stroke="var(--axis)"/>`;
+  days.forEach((d,i) => { g += `<rect class="hit" data-i="${i}" x="${m.l + i*bw}" y="${m.t}" width="${bw}" height="${ih}" fill="transparent"/>`; });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${kind === 'visits' ? 'Visitas' : 'Facturación'} por día y canal">${g}</svg><div class="tip" hidden></div>`;
+  const tip = el.querySelector('.tip'), fmtV = kind === 'visits' ? fmtN : fmt$;
+  el.querySelectorAll('.hit').forEach(h => {
+    h.addEventListener('mousemove', ev => {
+      const i = +h.dataset.i, rows = keys.filter(k => s[k][i] > 0).sort((a,b) => s[b][i] - s[a][i]);
+      const dt = new Date(days[i] + 'T12:00:00');
+      tip.innerHTML = `<b>${dt.getDate()} ${MON[dt.getMonth()]} · ${fmtV(totals[i])}</b>` + (rows.map(k => `<div class="r"><span><span class="dot" style="background:${col(k)}"></span>${esc(chLabel(k))}</span><span>${fmtV(s[k][i])}</span></div>`).join('') || '<span class="muted">Sin datos</span>');
+      tip.hidden = false;
+      const rect = el.getBoundingClientRect(); let lx = ev.clientX - rect.left + 14;
+      if (lx + 220 > rect.width) lx = ev.clientX - rect.left - 230;
+      tip.style.left = Math.max(0, lx) + 'px'; tip.style.top = Math.max(0, ev.clientY - rect.top - 20) + 'px';
+      h.setAttribute('fill', 'var(--ink)'); h.setAttribute('fill-opacity', '.05');
+    });
+    h.addEventListener('mouseleave', () => { tip.hidden = true; h.setAttribute('fill', 'transparent'); });
+  });
+}
+
+/* ---------- visits table ---------- */
+function renderVisitsTable(p){
+  const {ch, tot} = aggregate(p);
+  const rows = CH.map(c => ({k:c.key, ...ch[c.key]})).filter(r => r.ses).sort((a,b) => b.ses - a.ses);
+  document.getElementById('t-visits').innerHTML =
+    `<thead><tr><th>Canal</th><th>Visitas</th><th>% del total</th><th>Con interés</th><th>Agregar al carrito</th><th>Carrito / 100 visitas</th></tr></thead><tbody>` +
+    rows.map(r => `<tr><td><span class="dot" style="background:${col(r.k)}"></span><span class="chname">${esc(chLabel(r.k))}</span></td>
+      <td>${fmtN(r.ses)}</td><td>${fmtP(pct(r.ses, tot.ses))}</td><td>${fmtP(pct(r.eng, r.ses))}</td><td>${fmtN(r.carts)}</td><td>${(r.carts / r.ses * 100).toLocaleString('es-AR',{maximumFractionDigits:1})}</td></tr>`).join('') + '</tbody>';
+}
+
+/* ---------- ads ---------- */
+function adsModel(p){
+  const plats = {};
+  const get = (plat, camp, ad) => {
+    const P = plats[plat] ||= {camps:{}, ses:0, carts:0, orders:0, rev:0, spend:0};
+    const C = P.camps[camp] ||= {ads:{}, ses:0, carts:0, orders:0, rev:0, spend:0, adsets:new Set()};
+    const A = C.ads[ad] ||= {ses:0, carts:0, orders:0, rev:0, spend:0};
+    return [P,C,A];
+  };
+  for (const [d,plat,camp,adset,ad,ses,eng,carts] of DATA.ga_ads) if (inR(d,p)) {
+    for (const o of get(plat, camp || '(sin campaña)', ad || '')) { o.ses += ses; o.carts += carts; }
+    if (adset) get(plat, camp || '(sin campaña)', ad || '')[1].adsets.add(adset);
+  }
+  for (const o of DATA.orders) if (o.plat && inR(o.dt.slice(0,10), p)) for (const x of get(o.plat, o.camp || '(sin campaña)', o.ad || '')) { x.orders++; x.rev += o.total; }
+  if (DATA.meta_spend) for (const [d,camp,adset,ad,spend] of DATA.meta_spend) if (inR(d,p)) for (const x of get('Meta Ads', camp, ad)) x.spend += spend;
+  return plats;
+}
+function adVerdict(x){
+  if (x.orders > 0 && x.spend) return x.rev / x.spend >= 3 ? ['good','Rinde'] : ['warn','ROAS bajo'];
+  if (x.orders > 0) return ['good','Vende'];
+  if (x.ses >= 60) return ['serious','Visitas sin ventas'];
+  return ['muted','Poco volumen'];
+}
+function renderAds(p){
+  const plats = adsModel(p), hasSpend = !!DATA.meta_spend;
+  const order = ['Meta Ads','TikTok Ads','Google Ads','Email'];
+  const box = document.getElementById('ads');
+  let html = `<h2>Publicidad: qué anuncio trae ventas</h2>
+    <p class="hint">Visitas y carritos: Google Analytics. Pedidos y facturación: WooCommerce, con la campaña y el anuncio guardados en cada pedido. Tocá una campaña para ver sus anuncios.${hasSpend ? '' : ' <b>Inversión y ROAS:</b> aparecen cuando se conecte la API de Meta; mientras tanto los anuncios de Meta se ven por su número (ID).'}</p>`;
+  const any = order.some(k => plats[k]);
+  if (!any) html += `<p class="muted">No hay tráfico de publicidad en este período.</p>`;
+  for (const k of order) {
+    const P = plats[k]; if (!P) continue;
+    const camps = Object.entries(P.camps).sort((a,b) => b[1].rev - a[1].rev || b[1].ses - a[1].ses);
+    html += `<div class="plat"><h3>${k} <span class="muted">${fmtN(P.ses)} visitas · ${fmtN(P.orders)} pedidos · ${fmt$(P.rev)}${hasSpend && P.spend ? ' · inversión ' + fmt$(P.spend) : ''}</span></h3>
+      <div class="tbl-wrap"><table><thead><tr><th>Campaña / anuncio</th><th>Visitas</th><th>Carritos</th><th>Pedidos</th><th>Facturación</th><th>Conversión</th>${hasSpend ? '<th>Inversión</th><th>ROAS</th>' : ''}<th class="l">Estado</th></tr></thead><tbody>`;
+    for (const [cName, C] of camps) {
+      const key = k + '|' + cName, open = state.open.has(key);
+      const ads = Object.entries(C.ads).filter(([a]) => a).sort((a,b) => b[1].rev - a[1].rev || b[1].ses - a[1].ses);
+      const [cls, txt] = adVerdict(C);
+      const label = nameOf(cName);
+      html += `<tr class="${ads.length ? 'clickable' : ''}" data-key="${esc(key)}"><td class="l"><span class="chname">${ads.length ? (open ? '▾ ' : '▸ ') : ''}${esc(label)}</span>${label !== cName ? ` <span class="id">${esc(cName)}</span>` : ''}${ads.length ? ` <span class="id">· ${ads.length} anuncios</span>` : ''}</td>
+        <td>${fmtN(C.ses)}</td><td>${fmtN(C.carts)}</td><td>${fmtN(C.orders)}</td><td>${fmt$(C.rev)}</td><td>${C.ses ? fmtP(pct(C.orders, C.ses)) : '—'}</td>
+        ${hasSpend ? `<td>${C.spend ? fmt$(C.spend) : '—'}</td><td>${C.spend ? (C.rev / C.spend).toLocaleString('es-AR',{maximumFractionDigits:1}) + 'x' : '—'}</td>` : ''}
+        <td class="l"><span class="chip ${cls}">${txt}</span></td></tr>`;
+      if (open) for (const [a, A] of ads) {
+        const [c2, t2] = adVerdict(A), al = nameOf(a);
+        html += `<tr class="sub"><td class="l">${esc(al.startsWith('…') ? 'Anuncio ' + al : al)} ${al !== a ? `<span class="id">${esc(a)}</span>` : ''}</td>
+          <td>${fmtN(A.ses)}</td><td>${fmtN(A.carts)}</td><td>${fmtN(A.orders)}</td><td>${fmt$(A.rev)}</td><td>${A.ses ? fmtP(pct(A.orders, A.ses)) : '—'}</td>
+          ${hasSpend ? `<td>${A.spend ? fmt$(A.spend) : '—'}</td><td>${A.spend ? (A.rev / A.spend).toLocaleString('es-AR',{maximumFractionDigits:1}) + 'x' : '—'}</td>` : ''}
+          <td class="l"><span class="chip ${c2}">${t2}</span></td></tr>`;
+      }
+    }
+    html += `</tbody></table></div></div>`;
+  }
+  box.innerHTML = html;
+  box.querySelectorAll('tr.clickable').forEach(tr => tr.addEventListener('click', () => {
+    const k = tr.dataset.key; state.open.has(k) ? state.open.delete(k) : state.open.add(k); renderAds(period(state.range));
+  }));
+}
+
+/* ---------- orders ---------- */
+function originText(o){
+  if (o.plat === 'Meta Ads') return `Anuncio Meta: ${esc(nameOf(o.ad) || '—')} <span class="id">campaña ${esc(nameOf(o.camp))}</span>`;
+  if (o.camp) return `${esc(o.src)} · ${esc(nameOf(o.camp))}${o.ad ? ` <span class="id">${esc(nameOf(o.ad))}</span>` : ''}`;
+  if (o.type === 'typein') return 'Entró directo (escribió la dirección o favorito)';
+  if (o.type === 'organic') return `Búsqueda en ${esc(o.src)}`;
+  if (o.type === 'referral') return `Link desde ${esc(o.src)}`;
+  return esc([o.src, o.med].filter(Boolean).join(' / ') || 'sin dato');
+}
+function renderOrders(p){
+  const sel = document.getElementById('f-ch');
+  const inP = DATA.orders.filter(o => inR(o.dt.slice(0,10), p));
+  const counts = {}; inP.forEach(o => counts[o.ch] = (counts[o.ch]||0) + 1);
+  sel.innerHTML = `<option value="">Todos los canales (${inP.length})</option>` + CH.filter(c => counts[c.key]).map(c => `<option value="${c.key}" ${state.ch === c.key ? 'selected' : ''}>${esc(c.label)} (${counts[c.key]})</option>`).join('');
+  const q = state.q.toLowerCase();
+  const rows = inP.filter(o => (!state.ch || o.ch === state.ch) && (!q || [o.n, o.items, o.src, o.camp, o.ad, nameOf(o.ad), nameOf(o.camp), o.entry].join(' ').toLowerCase().includes(q)));
+  const sum = rows.reduce((t,o) => t + o.total, 0);
+  document.getElementById('f-count').textContent = `${fmtN(rows.length)} pedidos · ${fmt$(sum)}`;
+  const shown = rows.slice(0, state.limit);
+  document.getElementById('t-orders').innerHTML =
+    `<thead><tr><th class="l">Fecha</th><th class="l">Pedido</th><th>Total</th><th class="l">Canal</th><th class="l">Origen</th><th class="l">Entró por</th><th class="l">Dispositivo</th><th class="l">Productos</th></tr></thead><tbody>` +
+    shown.map(o => `<tr><td class="l">${fmtDay(o.dt.slice(0,10))} <span class="muted">${o.dt.slice(11,16)}</span></td><td class="l">#${esc(o.n)}</td><td>${fmt$(o.total)}</td>
+      <td class="l"><span class="dot" style="background:${col(o.ch)}"></span>${esc(chLabel(o.ch))}</td>
+      <td class="l" style="white-space:normal;min-width:220px">${originText(o)}</td>
+      <td class="l small">${esc(o.entry || '—')}</td><td class="l small">${esc(o.dev || '—')}${o.visits ? ` <span class="id">${esc(o.visits)}ª visita</span>` : ''}</td>
+      <td class="l small" style="white-space:normal;min-width:240px">${esc(o.items)}</td></tr>`).join('') + '</tbody>';
+  const more = document.getElementById('more'); more.hidden = rows.length <= state.limit;
+}
+
+/* ---------- wiring ---------- */
+function render(){
+  const p = period(state.range);
+  document.querySelectorAll('#range button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.r === state.range)));
+  document.querySelectorAll('#tabs button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.t === state.tab)));
+  document.querySelectorAll('.tabpanel').forEach(el => { const on = el.id === 'p-' + state.tab; el.hidden = !on; if (on) el.style.display = 'flex'; });
+  renderNote(p);
+  if (state.tab === 'resumen') { renderTiles(p); renderChannels(p); stacked('c-sales', p, 'sales'); }
+  if (state.tab === 'visitas') { stacked('c-visits', p, 'visits'); renderVisitsTable(p); }
+  if (state.tab === 'publicidad') renderAds(p);
+  if (state.tab === 'ventas') renderOrders(p);
+}
+document.getElementById('gen').textContent = `Actualizado ${DATA.generated.slice(8,10)}/${DATA.generated.slice(5,7)} ${DATA.generated.slice(11)} · datos del ${fmtDay(DATA.desde)} al ${fmtDay(DATA.hasta)} · se actualiza todos los días a las 6:00`;
+document.getElementById('range').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.range = b.dataset.r; state.limit = 150; save(); render(); });
+document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.tab = b.dataset.t; save(); render(); });
+document.getElementById('f-ch').addEventListener('change', e => { state.ch = e.target.value; state.limit = 150; render(); });
+document.getElementById('f-q').addEventListener('input', e => { state.q = e.target.value; state.limit = 150; render(); });
+document.getElementById('more').addEventListener('click', () => { state.limit += 150; render(); });
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+render();
+</script>
