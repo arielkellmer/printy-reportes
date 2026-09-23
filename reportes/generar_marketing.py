@@ -89,7 +89,8 @@ def clean(v):
 def ga_session():
     from google.auth.transport.requests import AuthorizedSession
     from google.oauth2 import service_account
-    scopes = ['https://www.googleapis.com/auth/analytics.readonly']
+    scopes = ['https://www.googleapis.com/auth/analytics.readonly',
+              'https://www.googleapis.com/auth/webmasters.readonly']
     raw = os.environ.get('GA_SA_JSON')
     if raw:
         raw = raw.strip()
@@ -148,6 +149,47 @@ def fetch_ga(desde, hasta):
     return ga_daily, ga_ads, ga_users
 
 
+# ---------------------------------------------------------------- Search Console
+GSC_SITE = 'https://printy.photos/'
+BRAND = ('printy', 'megaphoto', 'mega photo', 'printi')
+
+
+def url_path(u):
+    p = urllib.parse.urlparse(u).path or '/'
+    return p if p.endswith('/') else p + '/'
+
+
+def fetch_gsc(desde, hasta):
+    """Google no pasa la búsqueda de cada visita; Search Console da los totales por
+    búsqueda y página. Devuelve (búsquedas diarias con clics, top búsquedas por página)."""
+    sess = ga_session()
+    url = ('https://searchconsole.googleapis.com/webmasters/v3/sites/'
+           + urllib.parse.quote(GSC_SITE, safe='') + '/searchAnalytics/query')
+
+    def query(dims):
+        rows, start = [], 0
+        while True:
+            r = sess.post(url, json={'startDate': desde, 'endDate': hasta, 'dimensions': dims,
+                                     'rowLimit': 25000, 'startRow': start, 'dataState': 'all'}).json()
+            if 'error' in r:
+                raise RuntimeError(r['error'].get('message'))
+            batch = r.get('rows', [])
+            rows += batch
+            if len(batch) < 25000:
+                return rows
+            start += 25000
+
+    daily = [[r['keys'][0], r['keys'][1], url_path(r['keys'][2]), int(r['clicks']), int(r['impressions'])]
+             for r in query(['date', 'query', 'page']) if r['clicks'] > 0]
+    by_page = defaultdict(list)
+    for r in query(['page', 'query']):
+        by_page[url_path(r['keys'][0])].append([r['keys'][1], int(r['clicks']), int(r['impressions']),
+                                                round(r['position'], 1)])
+    pages = {p: sorted(q, key=lambda x: (-x[1], -x[2]))[:5] for p, q in by_page.items()}
+    last = max((d[0] for d in daily), default=hasta)
+    return daily, pages, last
+
+
 # ---------------------------------------------------------------- WooCommerce
 def fetch_orders(desde, hasta):
     ck, cs = load_credentials()
@@ -169,7 +211,7 @@ def fetch_orders(desde, hasta):
         ch, plat = classify(src, med)
         entry = m.get('session_entry', '')
         try:
-            entry = urllib.parse.urlparse(entry).path or entry
+            entry = url_path(entry) if entry else ''
         except ValueError:
             pass
         items = '; '.join(f"{li.get('name', '')}{' x' + str(li['quantity']) if li.get('quantity', 1) > 1 else ''}"
@@ -232,6 +274,11 @@ def main():
         meta = fetch_meta(desde, hasta)
     except Exception as e:  # la pauta es opcional; no frenar el reporte
         print('Meta API no disponible:', e)
+    gsc = None
+    try:
+        gsc = fetch_gsc(desde, hasta)
+    except Exception as e:  # Search Console también es opcional
+        print('Search Console no disponible:', e)
 
     names_file = HERE / 'meta_ad_names.json'
     names = json.loads(names_file.read_text(encoding='utf-8')) if names_file.exists() else {}
@@ -245,13 +292,15 @@ def main():
         'ga_daily': ga_daily, 'ga_ads': ga_ads, 'ga_users': ga_users,
         'orders': orders, 'names': names,
         'meta_spend': meta['spend'] if meta else None,
+        'gsc_daily': gsc[0] if gsc else None, 'gsc_pages': gsc[1] if gsc else None,
+        'gsc_hasta': gsc[2] if gsc else None, 'brand': list(BRAND),
     }
     tpl = (HERE / 'marketing_template.html').read_text(encoding='utf-8')
     payload = json.dumps(data, ensure_ascii=False, separators=(',', ':')).replace('</', '<\\/')
     out = HERE / 'Marketing_Printy.html'
     out.write_text(tpl.replace('__MARKETING_DATA_JSON__', payload), encoding='utf-8')
     print(f'OK {out} | {desde}..{hasta} | GA filas {len(ga_daily)} / anuncios {len(ga_ads)} | pedidos {len(orders)}'
-          f" | Meta {'sí' if meta else 'no'}")
+          f" | Meta {'sí' if meta else 'no'} | Search Console {'sí' if gsc else 'no'}")
 
 
 if __name__ == '__main__':

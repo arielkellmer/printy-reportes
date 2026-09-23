@@ -119,6 +119,7 @@ select, input[type=search]{font:inherit; font-size:13px; padding:7px 10px; borde
     <button role="tab" data-t="resumen">Qué funciona</button>
     <button role="tab" data-t="visitas">Visitas</button>
     <button role="tab" data-t="publicidad">Publicidad</button>
+    <button role="tab" data-t="busquedas">Búsquedas en Google</button>
     <button role="tab" data-t="ventas">Cada venta</button>
   </nav>
 
@@ -155,6 +156,20 @@ select, input[type=search]{font:inherit; font-size:13px; padding:7px 10px; borde
     <section class="card" id="ads"></section>
   </div>
 
+  <div id="p-busquedas" class="tabpanel" hidden style="flex-direction:column;gap:18px">
+    <section class="card">
+      <h2>Qué buscan en Google los que entran</h2>
+      <p class="hint">Google no dice qué buscó cada persona, pero Search Console da el total de clics por búsqueda y la página que mostró. "Ventas de la página" son los pedidos que entraron desde Google por esa misma página en el período. Search Console tiene 2–3 días de demora: <span id="gsc-lag"></span></p>
+      <div class="filters">
+        <input type="search" id="q-q" placeholder="Filtrar búsqueda o página…" aria-label="Filtrar búsquedas">
+        <label class="small" style="display:inline-flex;gap:6px;align-items:center"><input type="checkbox" id="q-brand"> Ocultar búsquedas de marca (printy, megaphoto)</label>
+        <span class="muted small" id="q-count"></span>
+      </div>
+      <div class="tbl-wrap"><table id="t-queries"></table></div>
+      <button class="more" id="q-more" hidden>Mostrar más</button>
+    </section>
+  </div>
+
   <div id="p-ventas" class="tabpanel" hidden style="flex-direction:column;gap:18px">
     <section class="card">
       <h2>Cada venta y de dónde vino</h2>
@@ -187,9 +202,9 @@ const fmtDay = iso => { const [y,m,d] = iso.split('-'); return `${+d}/${+m}`; };
 const MON = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const nameOf = id => { if (!id) return ''; if (DATA.names[id]) return DATA.names[id]; return /^\d{10,}$/.test(id) ? '…' + id.slice(-6) : id; };
 
-let state = {range:'30', tab:'resumen', ch:'', q:'', limit:150, open:new Set()};
+let state = {range:'30', tab:'resumen', ch:'', q:'', limit:150, open:new Set(), qq:'', qbrand:false, qlimit:50};
 try { const s = JSON.parse(localStorage.getItem('printy-mkt') || '{}'); if (s.range) state.range = s.range; if (s.tab) state.tab = s.tab; } catch(e){}
-if (location.hash && ['resumen','visitas','publicidad','ventas'].includes(location.hash.slice(1))) state.tab = location.hash.slice(1);
+if (location.hash && ['resumen','visitas','publicidad','busquedas','ventas'].includes(location.hash.slice(1))) state.tab = location.hash.slice(1);
 const save = () => { try { localStorage.setItem('printy-mkt', JSON.stringify({range:state.range, tab:state.tab})); } catch(e){} };
 
 function period(r){
@@ -413,7 +428,11 @@ function originText(o){
   if (o.plat === 'Meta Ads') return `Anuncio Meta: ${esc(nameOf(o.ad) || '—')} <span class="id">campaña ${esc(nameOf(o.camp))}</span>`;
   if (o.camp) return `${esc(o.src)} · ${esc(nameOf(o.camp))}${o.ad ? ` <span class="id">${esc(nameOf(o.ad))}</span>` : ''}`;
   if (o.type === 'typein') return 'Entró directo (escribió la dirección o favorito)';
-  if (o.type === 'organic') return `Búsqueda en ${esc(o.src)}`;
+  if (o.type === 'organic') {
+    const qs = (DATA.gsc_pages && /google/i.test(o.src) && DATA.gsc_pages[o.entry]) || [];
+    const top = qs.filter(q => q[1] > 0).slice(0, 3);
+    return `Búsqueda en ${esc(o.src)}` + (top.length ? `<div class="id">Búsquedas probables: ${top.map(q => `“${esc(q[0])}”`).join(', ')}</div>` : '');
+  }
   if (o.type === 'referral') return `Link desde ${esc(o.src)}`;
   return esc([o.src, o.med].filter(Boolean).join(' / ') || 'sin dato');
 }
@@ -437,6 +456,32 @@ function renderOrders(p){
   const more = document.getElementById('more'); more.hidden = rows.length <= state.limit;
 }
 
+/* ---------- Google searches ---------- */
+const isBrand = q => DATA.brand.some(b => q.toLowerCase().includes(b));
+function renderQueries(p){
+  const t = document.getElementById('t-queries');
+  if (!DATA.gsc_daily) { t.innerHTML = '<tbody><tr><td class="l muted">Search Console no respondió en la última actualización.</td></tr></tbody>'; return; }
+  document.getElementById('gsc-lag').textContent = `datos hasta el ${fmtDay(DATA.gsc_hasta)}.`;
+  const agg = {};
+  for (const [d, q, page, clicks] of DATA.gsc_daily) if (inR(d, p)) {
+    const a = agg[q] ||= {q, clicks:0, pages:{}}; a.clicks += clicks; a.pages[page] = (a.pages[page] || 0) + clicks;
+  }
+  const sales = {};
+  for (const o of DATA.orders) if (o.ch === 'buscadores' && /google/i.test(o.src) && inR(o.dt.slice(0,10), p)) { const s = sales[o.entry] ||= {n:0, rev:0}; s.n++; s.rev += o.total; }
+  const f = state.qq.toLowerCase();
+  let rows = Object.values(agg).map(a => { const page = Object.entries(a.pages).sort((x,y) => y[1]-x[1])[0][0]; return {...a, page, brand: isBrand(a.q), s: sales[page] || {n:0, rev:0}}; })
+    .filter(r => (!state.qbrand || !r.brand) && (!f || (r.q + ' ' + r.page).toLowerCase().includes(f)))
+    .sort((a,b) => b.clicks - a.clicks);
+  const tot = rows.reduce((t,r) => t + r.clicks, 0);
+  document.getElementById('q-count').textContent = `${fmtN(rows.length)} búsquedas · ${fmtN(tot)} clics`;
+  const shown = rows.slice(0, state.qlimit);
+  t.innerHTML = `<thead><tr><th class="l">Búsqueda</th><th class="l">Tipo</th><th>Clics</th><th class="l">Página que mostró Google</th><th>Ventas de la página</th><th>Facturación</th></tr></thead><tbody>` +
+    shown.map(r => `<tr><td class="l" style="white-space:normal;min-width:200px"><span class="chname">${esc(r.q)}</span></td>
+      <td class="l"><span class="chip ${r.brand ? 'muted' : 'good'}">${r.brand ? 'Marca' : 'Genérica'}</span></td>
+      <td>${fmtN(r.clicks)}</td><td class="l small">${esc(r.page)}</td><td>${r.s.n ? fmtN(r.s.n) : '—'}</td><td>${r.s.n ? fmt$(r.s.rev) : '—'}</td></tr>`).join('') + '</tbody>';
+  document.getElementById('q-more').hidden = rows.length <= state.qlimit;
+}
+
 /* ---------- wiring ---------- */
 function render(){
   const p = period(state.range);
@@ -448,7 +493,11 @@ function render(){
   if (state.tab === 'visitas') { stacked('c-visits', p, 'visits'); renderVisitsTable(p); }
   if (state.tab === 'publicidad') renderAds(p);
   if (state.tab === 'ventas') renderOrders(p);
+  if (state.tab === 'busquedas') renderQueries(p);
 }
+document.getElementById('q-q').addEventListener('input', e => { state.qq = e.target.value; state.qlimit = 50; render(); });
+document.getElementById('q-brand').addEventListener('change', e => { state.qbrand = e.target.checked; state.qlimit = 50; render(); });
+document.getElementById('q-more').addEventListener('click', () => { state.qlimit += 50; render(); });
 document.getElementById('gen').textContent = `Actualizado ${DATA.generated.slice(8,10)}/${DATA.generated.slice(5,7)} ${DATA.generated.slice(11)} · datos del ${fmtDay(DATA.desde)} al ${fmtDay(DATA.hasta)} · se actualiza todos los días a las 6:00`;
 document.getElementById('range').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.range = b.dataset.r; state.limit = 150; save(); render(); });
 document.getElementById('tabs').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; state.tab = b.dataset.t; save(); render(); });
