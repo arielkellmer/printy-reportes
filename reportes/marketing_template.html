@@ -258,10 +258,12 @@ function renderChannels(p){
   const {ch, tot} = aggregate(p);
   const rows = CH.map(c => ({k:c.key, ...ch[c.key]})).filter(r => r.ses || r.orders).sort((a,b) => b.rev - a.rev || b.ses - a.ses);
   const maxRev = Math.max(1, ...rows.map(r => r.rev));
+  const metaSpend = DATA.meta_spend ? DATA.meta_spend.reduce((t, r) => t + (inR(r[0], p) ? r[4] : 0), 0) : 0;
+  const extra = k => k === 'meta' && metaSpend ? `<div class="id">inversión ${fmt$(metaSpend)} · ROAS ${(ch.meta.rev / metaSpend).toLocaleString('es-AR',{maximumFractionDigits:1})}x</div>` : '';
   document.getElementById('t-channels').innerHTML =
     `<thead><tr><th>Canal</th><th>Visitas</th><th>Pedidos</th><th>Facturación</th><th class="l" style="min-width:110px">% de la facturación</th><th>Conversión</th><th>Ticket prom.</th><th class="l">Estado</th></tr></thead><tbody>` +
     rows.map(r => { const [cls, txt] = verdict(r.k, r, tot); return `<tr>
-      <td><span class="dot" style="background:${col(r.k)}"></span><span class="chname">${esc(chLabel(r.k))}</span></td>
+      <td><span class="dot" style="background:${col(r.k)}"></span><span class="chname">${esc(chLabel(r.k))}</span>${extra(r.k)}</td>
       <td>${fmtN(r.ses)}</td><td>${fmtN(r.orders)}</td><td>${fmt$(r.rev)}</td>
       <td class="l"><div style="display:flex;align-items:center;gap:8px"><div class="bar" style="flex:1"><i style="width:${(r.rev/maxRev*100).toFixed(1)}%;background:${col(r.k)}"></i></div><span class="small muted" style="width:38px;text-align:right">${fmtP(pct(r.rev, tot.rev))}</span></div></td>
       <td>${r.ses ? fmtP(pct(r.orders, r.ses)) : '—'}</td><td>${r.orders ? fmt$(r.rev / r.orders) : '—'}</td>
@@ -341,6 +343,10 @@ function renderVisitsTable(p){
 }
 
 /* ---------- ads ---------- */
+// Algunos links de Meta mandan la campaña por nombre y otros por ID: unificar al ID
+const CAMP_BY_NAME = {};
+if (DATA.meta_spend) for (const r of DATA.meta_spend) { const n = DATA.names[r[1]]; if (n) CAMP_BY_NAME[n.toLowerCase()] = r[1]; }
+const normCamp = (plat, c) => plat === 'Meta Ads' && c ? (CAMP_BY_NAME[c.replace(/\+/g, ' ').toLowerCase()] || c) : c;
 function adsModel(p){
   const plats = {};
   const get = (plat, camp, ad) => {
@@ -350,10 +356,11 @@ function adsModel(p){
     return [P,C,A];
   };
   for (const [d,plat,camp,adset,ad,ses,eng,carts] of DATA.ga_ads) if (inR(d,p)) {
-    for (const o of get(plat, camp || '(sin campaña)', ad || '')) { o.ses += ses; o.carts += carts; }
-    if (adset) get(plat, camp || '(sin campaña)', ad || '')[1].adsets.add(adset);
+    const c = normCamp(plat, camp) || '(sin campaña)';
+    for (const o of get(plat, c, ad || '')) { o.ses += ses; o.carts += carts; }
+    if (adset) get(plat, c, ad || '')[1].adsets.add(adset);
   }
-  for (const o of DATA.orders) if (o.plat && inR(o.dt.slice(0,10), p)) for (const x of get(o.plat, o.camp || '(sin campaña)', o.ad || '')) { x.orders++; x.rev += o.total; }
+  for (const o of DATA.orders) if (o.plat && inR(o.dt.slice(0,10), p)) for (const x of get(o.plat, normCamp(o.plat, o.camp) || '(sin campaña)', o.ad || '')) { x.orders++; x.rev += o.total; }
   if (DATA.meta_spend) for (const [d,camp,adset,ad,spend] of DATA.meta_spend) if (inR(d,p)) for (const x of get('Meta Ads', camp, ad)) x.spend += spend;
   return plats;
 }
